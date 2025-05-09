@@ -121,6 +121,10 @@ echo "Agregando configuración de NGINX para $USERNAME..."
 CONFIG_LINE="    location /$USERNAME/ {\n        alias /home/$USERNAME/public_html/;\n        index index.html;\n        try_files \$uri \$uri/ =404;\n    }"
 echo -e "$CONFIG_LINE" | sudo tee -a /etc/nginx/sites-available/multiusuario > /dev/null
 
+# Ejecutar el comando chmod 755 en /home/usuarioXX
+echo "Ajustando permisos en /home/$USERNAME..."
+sudo chmod 755 "/home/$USERNAME"
+
 # Recargar NGINX
 echo "Recargando NGINX..."
 sudo nginx -t && sudo systemctl reload nginx
