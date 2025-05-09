@@ -114,5 +114,37 @@ sudo chmod 600 $CRED_FILE
 echo "Ajustando permisos en /home/$USERNAME..."
 sudo chmod 755 "/home/$USERNAME"
 
+# ---------------------------------------------------------------
+# NUEVA SECCIÓN: Permisos adicionales y configuración de NGINX
+# ---------------------------------------------------------------
+echo "Ajustando permisos y configurando NGINX para $USERNAME..."
+
+# Permisos y propiedad de los archivos
+sudo chmod o+x "/home/$USERNAME"
+sudo chmod -R 755 "/home/$USERNAME/public_html"
+sudo chown -R www-data:www-data "/home/$USERNAME/public_html"
+
+# Bloque location personalizado para NGINX
+NGINX_CONF="/etc/nginx/sites-available/multiusuario"
+LOCATION_BLOCK="    location /$USERNAME/ {
+        alias /home/$USERNAME/public_html/;
+        index index.html;
+        try_files \$uri \$uri/ =404;
+    }"
+
+# Insertar el bloque solo si no existe aún
+if ! grep -q "location /$USERNAME/" "$NGINX_CONF"; then
+    sudo sed -i "/server\s*{/a\\
+$LOCATION_BLOCK
+" "$NGINX_CONF"
+    echo "Bloque location /$USERNAME/ añadido a $NGINX_CONF."
+else
+    echo "El bloque location /$USERNAME/ ya existe en $NGINX_CONF."
+fi
+
+# Reiniciar NGINX para aplicar cambios
+echo "Reiniciando NGINX..."
+sudo systemctl reload nginx
+
 # Final
 echo "Proceso completado. Credenciales guardadas en: $CRED_FILE"
