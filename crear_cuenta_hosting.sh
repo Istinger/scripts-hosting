@@ -39,7 +39,7 @@ fi
 # Crear directorio /home/usuarioX si no existe y asignar permisos
 USER_HOME="/home/$USERNAME"
 if [ ! -d "$USER_HOME" ]; then
-    echo "Creando el directorio $USER_HOME..."
+   echo "Creando el directorio $USER_HOME..."
     sudo mkdir -p "$USER_HOME"
     sudo chown $USERNAME:$USERNAME "$USER_HOME"
     sudo chmod 755 "$USER_HOME"
@@ -63,8 +63,8 @@ fi
 # Crear archivo index.html con el mensaje "Hola usuario XX"
 echo "Creando archivo index.html en $USER_PUBLIC_HTML..."
 echo "<html><body><h1>Hola, $USERNAME</h1></body></html>" | sudo tee "$USER_PUBLIC_HTML/index.html" > /dev/null
-sudo chown $USERNAME:www-data "$USER_PUBLIC_HTML/index.html"
-sudo chmod 755 "$USER_PUBLIC_HTML/index.html"
+sudo chown $USERNAME:www.data "$USER_PUBLIC_HTML/index.html"
+sudo chmod -r 755 "$USER_PUBLIC_HTML/index.html"
 echo "Archivo index.html creado correctamente."
 
 # Crear base de datos y usuario de base de datos
@@ -110,25 +110,9 @@ EOF
 sudo chown $USERNAME:$USERNAME $CRED_FILE
 sudo chmod 600 $CRED_FILE
 
-# Ajustar permisos necesarios para NGINX
-echo "Ajustando permisos de acceso para NGINX..."
-sudo chmod o+x /home/$USERNAME
-sudo chmod -R 755 /home/$USERNAME/public_html
-sudo chown -R www-data:www-data /home/$USERNAME/public_html
-
-# Agregar bloque location al archivo de configuración de NGINX
-echo "Agregando configuración de NGINX para $USERNAME..."
-CONFIG_LINE="    location /$USERNAME/ {\n        alias /home/$USERNAME/public_html/;\n        index index.html;\n        try_files \$uri \$uri/ =404;\n    }"
-echo -e "$CONFIG_LINE" | sudo tee -a /etc/nginx/sites-available/multiusuario > /dev/null
-
 # Ejecutar el comando chmod 755 en /home/usuarioXX
 echo "Ajustando permisos en /home/$USERNAME..."
 sudo chmod 755 "/home/$USERNAME"
 
-# Recargar NGINX
-echo "Recargando NGINX..."
-sudo nginx -t && sudo systemctl reload nginx
-
 # Final
 echo "Proceso completado. Credenciales guardadas en: $CRED_FILE"
-
