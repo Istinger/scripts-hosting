@@ -199,5 +199,13 @@ fi
 echo "Recargando NGINX..."
 sudo nginx -t && sudo systemctl reload nginx
 
+# Ajustar permisos finales y reiniciar vsftpd
+echo "Estableciendo permisos correctos para /home/$USERNAME/public_html..."
+sudo chown -R $USERNAME:$USERNAME "/home/$USERNAME/public_html"
+sudo chmod -R 755 "/home/$USERNAME/public_html"
+
+echo "Reiniciando el servicio vsftpd..."
+sudo systemctl restart vsftpd
+
 # Final
 echo "Proceso completado. Credenciales guardadas en: $CRED_FILE"
