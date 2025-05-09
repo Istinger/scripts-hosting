@@ -62,7 +62,72 @@ fi
 
 # Crear archivo index.html con el mensaje "Hola usuario XX"
 echo "Creando archivo index.html en $USER_PUBLIC_HTML..."
-echo "<html><body><h1>Hola, $USERNAME</h1></body></html>" | sudo tee "$USER_PUBLIC_HTML/index.html" > /dev/null
+
+sudo tee "$USER_PUBLIC_HTML/index.html" > /dev/null <<EOF
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Bienvenido $USERNAME</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+        }
+        .info {
+            margin-top: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            display: inline-block;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+        .info h2 {
+            color: #2980b9;
+        }
+        .info p {
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        code {
+            background-color: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hola, $USERNAME 👋</h1>
+    <div class="info">
+        <h2>Acceso a phpMyAdmin</h2>
+        <p>URL: <a href="http://172.17.42.125:8013/phpmyadmin/" target="_blank">http://172.17.42.125:8013/phpmyadmin/</a></p>
+        <p>Usuario BD: <code>$USERNAME</code></p>
+        <p>Contraseña BD: <code>$PASSWORD</code></p>
+
+        <h2>Datos para FileZilla (FTP)</h2>
+        <p>Servidor: <code>172.17.42.125</code></p>
+        <p>Usuario: <code>$USERNAME</code></p>
+        <p>Contraseña: <code>$PASSWORD</code></p>
+        <p>Puerto: <code>2113</code></p>
+    </div>
+</body>
+</html>
+EOF
+
 sudo chown $USERNAME:www-data "$USER_PUBLIC_HTML/index.html"
 sudo chmod 755 "$USER_PUBLIC_HTML/index.html"
 echo "Archivo index.html creado correctamente."
