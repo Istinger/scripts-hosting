@@ -10,43 +10,54 @@ NUMERO="$1"
 USERNAME="usuario$NUMERO"
 DB_NAME="${USERNAME}_db"
 NGINX_FILE="/etc/nginx/sites-available/multiusuario"
+WEB_DIR="/var/www/$USERNAME"
+HOME_DIR="/home/$USERNAME"
 
-echo "Eliminando $USERNAME..."
+echo "=== Eliminando $USERNAME ==="
 
 # 1. Eliminar usuario del sistema y su home
-sudo deluser --remove-home "$USERNAME"
-if [ $? -eq 0 ]; then
-    echo "Usuario $USERNAME eliminado."
+echo "[1] Eliminando usuario del sistema..."
+if id "$USERNAME" &>/dev/null; then
+    sudo deluser --remove-home "$USERNAME"
+    echo "→ Usuario $USERNAME eliminado."
 else
-    echo "Error al eliminar el usuario $USERNAME (puede que no exista)."
+    echo "→ Usuario $USERNAME no existe, se omite."
 fi
 
 # 2. Eliminar base de datos y usuario en MariaDB
-echo "Eliminando base de datos y usuario en MariaDB..."
+echo "[2] Eliminando base de datos y usuario en MariaDB..."
 sudo mysql -u root -p123 <<EOF
 DROP DATABASE IF EXISTS $DB_NAME;
 DROP USER IF EXISTS '$USERNAME'@'localhost';
 FLUSH PRIVILEGES;
 EOF
+echo "→ Base de datos y usuario eliminados."
 
-if [ $? -eq 0 ]; then
-    echo "Base de datos y usuario de base de datos eliminados correctamente."
+# 3. Eliminar bloque location en archivo NGINX
+echo "[3] Eliminando bloque location en NGINX..."
+if grep -q "location /$USERNAME/" "$NGINX_FILE"; then
+    sudo sed -i "/location \/$USERNAME\//,/^ *}/d" "$NGINX_FILE"
+    echo "→ Bloque location eliminado de $NGINX_FILE."
 else
-    echo "Error al eliminar base de datos o usuario de base de datos."
+    echo "→ No se encontró bloque location para $USERNAME en NGINX."
 fi
 
-# 3. Eliminar el bloque location /usuarioX/ del archivo multiusuario
-echo "Eliminando configuración NGINX para $USERNAME..."
-sudo sed -i "/location \/usuario$NUMERO\//,/^ *}/d" "$NGINX_FILE"
-
-# 4. Probar y recargar NGINX
-echo "Recargando NGINX..."
-sudo nginx -t && sudo systemctl reload nginx
-if [ $? -eq 0 ]; then
-    echo "NGINX recargado correctamente."
+# 4. Eliminar carpeta web si fue creada en /var/www
+echo "[4] Eliminando carpeta web en $WEB_DIR..."
+if [ -d "$WEB_DIR" ]; then
+    sudo rm -rf "$WEB_DIR"
+    echo "→ Carpeta $WEB_DIR eliminada."
 else
-    echo "Error en la recarga de NGINX. Revisa el archivo $NGINX_FILE."
+    echo "→ Carpeta $WEB_DIR no existe."
 fi
 
-echo "Eliminación completa de $USERNAME.
+# 5. Recargar NGINX solo si la configuración es válida
+echo "[5] Recargando NGINX..."
+if sudo nginx -t; then
+    sudo systemctl reload nginx
+    echo "→ NGINX recargado correctamente."
+else
+    echo "Error de sintaxis en NGINX. Revisa $NGINX_FILE"
+fi
 
+echo "Eliminación completa de $USERNAME."
