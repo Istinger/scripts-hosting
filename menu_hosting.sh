@@ -11,8 +11,16 @@ while true; do
 
     case "$OPCION" in
         1)
-            read -p "Ingrese el número de usuario a crear (ej: 4 para usuario4): " NUM
-            bash crear_cuenta_hosting.sh "$NUM"
+            # Buscar el número más alto entre los usuarios 'usuarioX'
+            LAST_NUM=$(cut -d: -f1 /etc/passwd | grep -o '^usuario[0-9]\+' | sed 's/usuario//' | sort -n | tail -n 1)
+            if [ -z "$LAST_NUM" ]; then
+                NEXT_NUM=1
+            else
+                NEXT_NUM=$((LAST_NUM + 1))
+            fi
+
+            echo "Creando usuario número: $NEXT_NUM"
+            bash crear_cuenta_hosting.sh "$NEXT_NUM"
             read -p "Presione Enter para continuar..." ;;
         2)
             read -p "Ingrese el número de usuario a eliminar (ej: 4 para usuario4): " NUM
