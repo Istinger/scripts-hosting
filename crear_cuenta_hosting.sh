@@ -1,66 +1,51 @@
 #!/bin/bash
 
-# Comprobación de argumento
-if [ -z "$1" ]; then
-    echo "Uso: $0 <número_usuario>"
-    exit 1
-fi
+# Buscar el siguiente número disponible para el nombre de usuario
+NEXT_NUM=1
+while id "usuario$NEXT_NUM" &>/dev/null; do
+    ((NEXT_NUM++))
+done
 
-# Variables base
-USER_NUM=$1
-USERNAME="usuario$USER_NUM"
+USERNAME="usuario$NEXT_NUM"
 WEB_DIR="/var/www/$USERNAME"
 DB_NAME="${USERNAME}_db"
 DB_USER="${USERNAME}"
-PASSWORD=$(openssl rand -base64 12)  # Usamos la misma contraseña para FTP y la base de datos
+PASSWORD=$(openssl rand -base64 12)
+
+echo "Creando cuenta para: $USERNAME"
 
 # Crear usuario del sistema
 echo "Creando usuario del sistema $USERNAME..."
-sudo useradd -m -s /bin/bash $USERNAME
-if [ $? -eq 0 ]; then
-    echo "Usuario $USERNAME creado correctamente."
-else
+sudo useradd -m -s /bin/bash "$USERNAME"
+if [ $? -ne 0 ]; then
     echo "Error al crear el usuario $USERNAME."
     exit 2
 fi
+echo "Usuario $USERNAME creado correctamente."
 
 # Crear directorio web y public_html
 echo "Creando directorio web en $WEB_DIR..."
-sudo mkdir -p $WEB_DIR/public_html
-sudo chown $USERNAME:$USERNAME $WEB_DIR/public_html
-sudo chmod 755 $WEB_DIR/public_html
-if [ $? -eq 0 ]; then
-    echo "Directorio web y public_html creados correctamente."
-else
-    echo "Error al crear el directorio web."
-    exit 3
-fi
+sudo mkdir -p "$WEB_DIR/public_html"
+sudo chown "$USERNAME:$USERNAME" "$WEB_DIR/public_html"
+sudo chmod 755 "$WEB_DIR/public_html"
 
-# Crear directorio /home/usuarioX si no existe y asignar permisos
+# Crear directorio /home/usuarioX si no existe
 USER_HOME="/home/$USERNAME"
 if [ ! -d "$USER_HOME" ]; then
-   echo "Creando el directorio $USER_HOME..."
     sudo mkdir -p "$USER_HOME"
-    sudo chown $USERNAME:$USERNAME "$USER_HOME"
+    sudo chown "$USERNAME:$USERNAME" "$USER_HOME"
     sudo chmod 755 "$USER_HOME"
-    echo "Directorio $USER_HOME creado y permisos asignados correctamente."
-else
-    echo "El directorio $USER_HOME ya existe."
 fi
 
-# Crear subdirectorio public_html dentro de /home/usuarioX si no existe
-USER_PUBLIC_HTML="/home/$USERNAME/public_html"
+# Crear public_html en /home/usuarioX
+USER_PUBLIC_HTML="$USER_HOME/public_html"
 if [ ! -d "$USER_PUBLIC_HTML" ]; then
-    echo "Creando el directorio $USER_PUBLIC_HTML..."
     sudo mkdir -p "$USER_PUBLIC_HTML"
-    sudo chown $USERNAME:$USERNAME "$USER_PUBLIC_HTML"
+    sudo chown "$USERNAME:$USERNAME" "$USER_PUBLIC_HTML"
     sudo chmod 755 "$USER_PUBLIC_HTML"
-    echo "Directorio public_html creado y permisos asignados correctamente."
-else
-    echo "El directorio public_html ya existe."
 fi
 
-# Crear archivo index.html con el mensaje "Hola usuario XX"
+# Crear archivo index.html personalizado
 echo "Creando archivo index.html en $USER_PUBLIC_HTML..."
 
 sudo tee "$USER_PUBLIC_HTML/index.html" > /dev/null <<EOF
@@ -127,85 +112,51 @@ sudo tee "$USER_PUBLIC_HTML/index.html" > /dev/null <<EOF
 </body>
 </html>
 EOF
-
-sudo chown $USERNAME:www-data "$USER_PUBLIC_HTML/index.html"
+sudo chown "$USERNAME:www-data" "$USER_PUBLIC_HTML/index.html"
 sudo chmod 755 "$USER_PUBLIC_HTML/index.html"
-echo "Archivo index.html creado correctamente."
 
-# Crear base de datos y usuario de base de datos
-echo "Creando base de datos y usuario de base de datos $DB_NAME..."
+# Crear base de datos y usuario
+echo "Creando base de datos $DB_NAME..."
 sudo mysql -u root -p123 <<EOF
 CREATE DATABASE $DB_NAME;
 CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$PASSWORD';
 GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 EOF
-if [ $? -eq 0 ]; then
-    echo "Base de datos $DB_NAME y usuario $DB_USER creados correctamente."
-else
-    echo "Error al crear la base de datos y el usuario de base de datos."
-    exit 4
-fi
 
-# Configuración FTP (requiere sudo)
-echo "Configurando acceso FTP para $USERNAME..."
+# Configurar contraseña FTP
+echo "Configurando acceso FTP..."
 echo "$USERNAME:$PASSWORD" | sudo chpasswd
-if [ $? -eq 0 ]; then
-    echo "Contraseña FTP configurada correctamente."
-else
-    echo "Error al configurar la contraseña FTP."
-    exit 5
-fi
 
-# Crear archivo de credenciales en public_html
-echo "Generando archivo credenciales.txt en $USER_PUBLIC_HTML..."
+# Archivo de credenciales
 CRED_FILE="$USER_PUBLIC_HTML/credenciales.txt"
-sudo tee $CRED_FILE > /dev/null <<EOF
-Credenciales para la cuenta de hosting $USERNAME:
+sudo tee "$CRED_FILE" > /dev/null <<EOF
+Credenciales de $USERNAME:
 
 Usuario del sistema: $USERNAME
-Contraseña (FTP y Base de Datos): $PASSWORD
-
-Base de Datos: $DB_NAME
-Usuario Base de Datos: $DB_USER
-
-Puedes acceder a phpMyAdmin con estas credenciales.
+Contraseña: $PASSWORD
+Base de datos: $DB_NAME
+Usuario DB: $DB_USER
 EOF
+sudo chown "$USERNAME:$USERNAME" "$CRED_FILE"
+sudo chmod 600 "$CRED_FILE"
 
-sudo chown $USERNAME:$USERNAME $CRED_FILE
-sudo chmod 600 $CRED_FILE
+# Ajustar permisos finales
+sudo chmod 755 "$USER_HOME"
+sudo chmod o+x "$USER_HOME"
+sudo chmod -R 755 "$USER_PUBLIC_HTML"
+sudo chown -R www-data:www-data "$USER_PUBLIC_HTML"
 
-# Ajustar permisos
-echo "Ajustando permisos en /home/$USERNAME..."
-sudo chmod 755 "/home/$USERNAME"
-sudo chmod o+x "/home/$USERNAME"
-sudo chmod -R 755 "/home/$USERNAME/public_html"
-sudo chown -R www-data:www-data "/home/$USERNAME/public_html"
-
-# Configuración NGINX
+# Configurar NGINX
 NGINX_CONF="/etc/nginx/sites-available/multiusuario"
-
-echo "Configurando NGINX para $USERNAME..."
-
-# Insertar bloque location justo antes de la última llave de cierre
 if ! grep -q "location /$USERNAME/" "$NGINX_CONF"; then
-    sudo sed -i "\#^}#i \    location /$USERNAME/ {\n        alias /home/$USERNAME/public_html/;\n        index index.html;\n        try_files \$uri \$uri/ =404;\n    }" "$NGINX_CONF"
+    sudo sed -i "/^}/i \    location /$USERNAME/ {\n        alias /home/$USERNAME/public_html/;\n        index index.html;\n        try_files \$uri \$uri/ =404;\n    }\n" "$NGINX_CONF"
     echo "Bloque location /$USERNAME/ añadido a $NGINX_CONF."
-else
-    echo "El bloque location /$USERNAME/ ya existe en $NGINX_CONF."
 fi
 
-# Recargar NGINX
-echo "Recargando NGINX..."
+# Recargar NGINX y reiniciar vsftpd
 sudo nginx -t && sudo systemctl reload nginx
-
-# Ajustar permisos finales y reiniciar vsftpd
-echo "Estableciendo permisos correctos para /home/$USERNAME/public_html..."
-sudo chown -R $USERNAME:$USERNAME "/home/$USERNAME/public_html"
-sudo chmod -R 755 "/home/$USERNAME/public_html"
-
-echo "Reiniciando el servicio vsftpd..."
 sudo systemctl restart vsftpd
 
-echo "Usuario $USERNAME creado correctamente con credenciales guardadas en: $CRED_FILE"
+echo "Usuario $USERNAME creado exitosamente con acceso web, FTP y base de datos."
 
