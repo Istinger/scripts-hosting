@@ -128,18 +128,23 @@ EOF
 echo "Configurando acceso FTP..."
 echo "$USERNAME:$PASSWORD" | sudo chpasswd
 
-# Archivo de credenciales
-CRED_FILE="$USER_PUBLIC_HTML/credenciales.txt"
-sudo tee "$CRED_FILE" > /dev/null <<EOF
-Credenciales de $USERNAME:
+# Crear archivo de credenciales en /home/usuarioX
+echo "Generando archivo credenciales.txt en $USER_HOME..."
+CRED_FILE="$USER_HOME/credenciales.txt"
+sudo tee $CRED_FILE > /dev/null <<EOF
+Credenciales para la cuenta de hosting $USERNAME:
 
 Usuario del sistema: $USERNAME
-Contraseña: $PASSWORD
-Base de datos: $DB_NAME
-Usuario DB: $DB_USER
+Contraseña (FTP y Base de Datos): $PASSWORD
+
+Base de Datos: $DB_NAME
+Usuario Base de Datos: $DB_USER
+
+Puedes acceder a phpMyAdmin con estas credenciales.
 EOF
-sudo chown "$USERNAME:$USERNAME" "$CRED_FILE"
-sudo chmod 600 "$CRED_FILE"
+
+sudo chown $USERNAME:$USERNAME $CRED_FILE
+sudo chmod 600 $CRED_FILE
 
 # Ajustar permisos finales
 sudo chmod 755 "$USER_HOME"
