@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# ================================
-# SCRIPT PARA ELIMINAR UNA CUENTA
-# ================================
-
 # Comprobación de argumento
 if [ -z "$1" ]; then
     echo "❌ Uso: $0 <número_usuario>"
