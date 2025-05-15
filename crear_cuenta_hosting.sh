@@ -159,8 +159,45 @@ if ! grep -q "location /$USERNAME/" "$NGINX_CONF"; then
     echo "Bloque location /$USERNAME/ añadido a $NGINX_CONF."
 fi
 
-# Recargar NGINX y reiniciar vsftpd
+# CONFIGURACIÓN NGINX - ARCHIVO usuarioX.com
+SITE_CONF="/etc/nginx/sites-available/${USERNAME}.com"
+PORT="80"
+
+echo "🌐 Configurando NGINX para $USERNAME..."
+
+sudo tee "$SITE_CONF" > /dev/null <<EOF
+server {
+    listen ${PORT};
+    server_name ${USERNAME}.com;
+
+    root /home/${USERNAME}/public_html;
+    index index.html index.php;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.1-fpm.sock;
+    }
+
+    error_log /var/log/nginx/${USERNAME}_error.log;
+    access_log /var/log/nginx/${USERNAME}_access.log;
+}
+EOF
+
+# ENLACE SIMBÓLICO EN sites-enabled
+if [ ! -e "/etc/nginx/sites-enabled/${USERNAME}.com" ]; then
+    sudo ln -s "$SITE_CONF" "/etc/nginx/sites-enabled/"
+fi
+
+# REVISAR Y RECARGAR NGINX
+echo "Recargando NGINX..."
 sudo nginx -t && sudo systemctl reload nginx
+
+# REINICIAR VSFTPD
+echo "Reiniciando vsftpd..."
 sudo systemctl restart vsftpd
 
 echo "Usuario $USERNAME creado exitosamente con acceso web, FTP y base de datos."
