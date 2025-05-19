@@ -42,7 +42,8 @@ Nuestro script automatiza el proceso de creación de cuentas de hosting web:
 ### ▶️ Ejecución del script
 
 sudo ./nombre_script.sh
-📋 Requisitos
+---
+###📋 Requisitos
 🐧 Ubuntu Server 20.04 o superior
 
 🌐 NGINX
@@ -54,7 +55,8 @@ sudo ./nombre_script.sh
 🧰 phpMyAdmin
 
 📡 vsftpd
-
+---
+###
 👨‍💻 Autores
 👨‍🎓 Antony Cajamarca
 
