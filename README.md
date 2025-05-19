@@ -41,7 +41,6 @@ Nuestro script automatiza el proceso de creación de cuentas de hosting web:
 
 ### ▶️ Ejecución del script
 
-```bash
 sudo ./nombre_script.sh
 📋 Requisitos
 🐧 Ubuntu Server 20.04 o superior
